@@ -3,13 +3,13 @@ package com.example.adrianm.myapplication;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.app.LoaderManager.LoaderCallbacks;
-import android.content.Intent;
 
 import android.content.CursorLoader;
 import android.content.Loader;
@@ -21,6 +21,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -31,6 +32,18 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.example.adrianm.myapplication.config.Settings;
+import com.example.adrianm.myapplication.register.Register;
+
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,8 +102,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         mEmailSignInButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent i = new Intent(view.getContext(),MainActivity.class);
-                view.getContext().startActivity(i);
+                attemptLogin();
 
             }
         });
@@ -183,10 +195,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             mEmailView.setError(getString(R.string.error_field_required));
             focusView = mEmailView;
             cancel = true;
-        } else if (!isEmailValid(email)) {
-            mEmailView.setError(getString(R.string.error_invalid_email));
-            focusView = mEmailView;
-            cancel = true;
         }
 
         if (cancel) {
@@ -197,7 +205,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
-            mAuthTask = new UserLoginTask(email, password);
+            mAuthTask = new UserLoginTask(email, password,this);
             mAuthTask.execute((Void) null);
         }
     }
@@ -310,20 +318,64 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         private final String mEmail;
         private final String mPassword;
+        private Context context;
 
-        UserLoginTask(String email, String password) {
+
+        UserLoginTask(String email, String password, Context context) {
             mEmail = email;
             mPassword = password;
+            this.context = context;
         }
 
         @Override
         protected Boolean doInBackground(Void... params) {
             // TODO: attempt authentication against a network service.
 
+            //JsonResponse
             try {
-                // Simulate network access.
+                Log.d("Exeption","Entro");
+                //Crea objeto Url que sirve para conectarse con el server
+                URL url = new URL(Settings.URL_API+"/api-token-auth/");
+                //Se abre la conexion
+                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+                //Se indica el protocolo a usar
+                httpURLConnection.setRequestMethod("POST");
+                httpURLConnection.setDoInput(true);
+                httpURLConnection.setDoOutput(true);
+                //Se crean los parametros
+                String parameters = "username="+this.mEmail+"&"+"password="+this.mPassword;
+                //Se envian datos al servidor
+                OutputStream os = httpURLConnection.getOutputStream();
+                BufferedWriter buffer = new BufferedWriter(new OutputStreamWriter(os,"UTF-8"));
+                buffer.write(parameters);
+                buffer.flush();
+                buffer.close();
+                os.close();
+                int responseCode=httpURLConnection.getResponseCode();
+                String response = "";
+                // Evalua codigo 200 en la respuesta del servidor
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    String line;
+                    BufferedReader br=new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+                    while ((line=br.readLine()) != null) {
+                        response+=line;
+                    }
+                    //Se captura el resultado y se crea un objeto json
+                    JSONObject json = new JSONObject(response);
+                    //Se accede a las propiedades del objeto json
+                    Log.d("respuesta",json.getString("token"));
+
+                }
+                else {
+                    response="";
+
+                }
+
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
+                return false;
+            } catch (Exception e) {
+                Log.d("Exeption",e.getMessage());
                 return false;
             }
 
@@ -345,7 +397,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             showProgress(false);
 
             if (success) {
-                finish();
+                Intent i = new Intent(this.context,MainActivity.class);
+                context.startActivity(i);
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));
                 mPasswordView.requestFocus();

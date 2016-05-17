@@ -9,7 +9,7 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.example.adrianm.myapplication.Register"
+    tools:context=".register.Register"
     tools:showIn="@layout/activity_register">
 
   <ScrollView

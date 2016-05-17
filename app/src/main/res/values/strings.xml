@@ -25,4 +25,5 @@
     <string name="action_settings">Settings</string>
     <string name="title_activity_appoinment">Citas</string>
     <string name="title_activity_register">Registro</string>
+    <string name="title_activity_maps">Map</string>
 </resources>
